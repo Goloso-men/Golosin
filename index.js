@@ -13,17 +13,16 @@ async function start(){
   sock.ev.on('creds.update', saveCreds);
 
   if(!state.creds.registered){
-    let num = (process.env.PHONE_NUMBER||'').replace(/[^0-9]/g,'');
+    const num = (process.env.PHONE_NUMBER||'').replace(/[^0-9]/g,'');
     if(!num){
       console.log('PHONE_NUMBER no definido en Render');
-      return;
+    } else {
+      setTimeout(()=>{
+        sock.requestPairingCode(num).then(code=>{
+          console.log('\n\n>>> CODIGO: '+code.match(/.{1,4}/g).join('-')+' <<<\n\n');
+        }).catch(e=>console.log('Error codigo', e.message));
+      }, 3000);
     }
-    setTimeout(async()=>{
-      try{
-        let code = await sock.requestPairingCode(num);
-        console.log('\n\n>>> CODIGO: '+code.match(/.{1,4}/g).join('-')+' <<<\n\n');
-      }catch(e){ console.log('Error codigo', e.message); }
-    }, 3000);
   }
 
   sock.ev.on('connection.update', d=>{
@@ -35,6 +34,10 @@ async function start(){
     if(!msg.message) return;
     const jid=msg.key.remoteJid;
     const txt=(msg.message.conversation||msg.message.extendedTextMessage?.text||'').toLowerCase();
+    if(txt==='/ping') await sock.sendMessage(jid,{text:'pong Golosin activo'});
+  });
+}
+start();    const txt=(msg.message.conversation||msg.message.extendedTextMessage?.text||'').toLowerCase();
     if(txt==='/ping') await sock.sendMessage(jid,{text:'pong Golosin activo'});
   });
 }
