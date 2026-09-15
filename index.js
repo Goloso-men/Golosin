@@ -12,7 +12,7 @@ try {
 } catch {}
 
 async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState('auth')
+  const { state, saveCreds } = await useMultiFileAuthState('auth2')
   const sock = makeWASocket({
     auth: state,
     logger: P({ level: 'silent' }),
