@@ -1,40 +1,44 @@
 const http = require('http');
-http.createServer((_,res)=>res.end('Golosin activo')).listen(process.env.PORT||10000);
-const { default: makeWASocket, useMultiFileAuthState, Browsers } = require('@whiskeysockets/baileys')
-const fs = require('fs')
-const P = require('pino')
-
-let saldos = {}
-try{ if(fs.existsSync('./saldos.json')) saldos=JSON.parse(fs.readFileSync('./saldos.json','utf8')) }catch{}
+http.createServer((_,res)=>res.end('ok')).listen(process.env.PORT||10000);
+const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const P = require('pino');
 
 async function start(){
-  const { state, saveCreds } = await useMultiFileAuthState('auth3')
+  const { state, saveCreds } = await useMultiFileAuthState('auth_final');
   const sock = makeWASocket({
     auth: state,
     logger: P({level:'silent'}),
-    browser: Browsers.ubuntu('Chrome'),
-    printQRInTerminal: false
-  })
-  sock.ev.on('creds.update', saveCreds)
+    browser: ['Ubuntu','Chrome','110.0.0.0']
+  });
+  sock.ev.on('creds.update', saveCreds);
 
   if(!state.creds.registered){
-    const num = (process.env.PHONE_NUMBER||'').replace(/[^0-9]/g,'')
-    if(num){
-      setTimeout(async()=>{
-        try{
-          const code = await sock.requestPairingCode(num)
-          console.log(`\n\n>>> CODIGO: ${code.match(/.{1,4}/g).join('-')} <<<\nTIENES 60 SEGUNDOS PARA PONERLO\n\n`)
-        }catch(e){ console.log('Error codigo:', e.message) }
-      }, 3000)
+    let num = (process.env.PHONE_NUMBER||'').replace(/[^0-9]/g,'');
+    if(!num){
+      console.log('PHONE_NUMBER no definido en Render');
+      return;
     }
+    setTimeout(async()=>{
+      try{
+        let code = await sock.requestPairingCode(num);
+        console.log('\n\n>>> CODIGO: '+code.match(/.{1,4}/g).join('-')+' <<<\n\n');
+      }catch(e){ console.log('Error codigo', e.message); }
+    }, 3000);
   }
 
-  sock.ev.on('connection.update', v=>{
-    if(v.connection==='open') console.log('>>> CONECTADO GOLOSIN <<<')
-  })
+  sock.ev.on('connection.update', d=>{
+    if(d.connection==='open') console.log('>>> CONECTADO <<<');
+  });
 
   sock.ev.on('messages.upsert', async m=>{
-    try{
+    const msg=m.messages[0];
+    if(!msg.message) return;
+    const jid=msg.key.remoteJid;
+    const txt=(msg.message.conversation||msg.message.extendedTextMessage?.text||'').toLowerCase();
+    if(txt==='/ping') await sock.sendMessage(jid,{text:'pong Golosin activo'});
+  });
+}
+start();    try{
       const msg = m.messages[0]
       if(!msg.message || msg.key.fromMe) return
       const sender = msg.key.participant || msg.key.remoteJid
