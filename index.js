@@ -1,3 +1,5 @@
+const http = require('http');
+http.createServer((req,res)=>res.end('Golosin activo')).listen(process.env.PORT || 10000);
 const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys')
 const qrcode = require('qrcode-terminal')
 const fs = require('fs')
